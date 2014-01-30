@@ -47,10 +47,7 @@ module Garlando
       pid = File.read(pid_path).to_i
       Timeout.timeout(10) do
         begin
-          while running?
-            Process.kill :INT, pid
-            sleep 0.5
-          end
+          kill pid while running?
         rescue Errno::ESRCH
         end
       end
@@ -71,6 +68,11 @@ module Garlando
 
     private
 
+    def kill(pid, sig=:INT)
+      Process.kill sig, pid
+      sleep 0.5
+    end
+
     def running?
       File.exists? pid_path
     end
@@ -83,8 +85,12 @@ module Garlando
       File.join @options[:pwd], 'config/environment.rb'
     end
 
+    def log_path
+      File.join @options[:pwd], @options[:log]
+    end
+
     def reopen
-      file = File.open File.join(@options[:pwd], @options[:log]), 'w+'
+      file = File.open log_path, 'w+'
       [STDOUT, STDERR].each { |e| e.reopen file }
     end
 
