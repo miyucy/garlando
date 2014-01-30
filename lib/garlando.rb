@@ -6,12 +6,13 @@ module Garlando
   class Server
     COMMANDS = %i[start restart stop status]
     OPTIONS  = {
-      server: 'thin',
-      host:   '0.0.0.0',
-      port:   65501,
-      pid:    'tmp/pids/asset_server.pid',
       env:    'development',
+      host:   '0.0.0.0',
+      log:    'log/garlando.log',
+      pid:    'tmp/pids/garlando.pid',
+      port:   65501,
       pwd:    Dir.pwd,
+      server: 'thin',
     }
 
     def initialize(options={})
@@ -24,7 +25,7 @@ module Garlando
     end
 
     def start
-      abort 'server is already running?' if File.exists? pid_path
+      abort 'server is already running?' if running?
       abort "File could not found (#{env_path})" unless File.exists?(env_path)
 
       Process.daemon nochdir = true
@@ -32,37 +33,36 @@ module Garlando
       File.write pid_path, Process.pid.to_s
       at_exit { File.unlink pid_path }
 
+      reopen
+
       ENV['RACK_ENV'] = @options[:env]
       require env_path
 
-      app = Rack::URLMap.new Rails.application.config.assets[:prefix] => Rails.application.assets
-      srv = Rack::Handler.pick @options[:server]
-      srv.run app, Host: @options[:host], Port: @options[:port]
+      server.run application, Host: @options[:host], Port: @options[:port]
     end
 
-    def stop(aborting = true)
-      unless File.exists?(pid_path)
-        return unless aborting
-        abort 'server is not running'
-      end
+    def stop
+      return abort 'server is not running' unless running?
 
       pid = File.read(pid_path).to_i
       Timeout.timeout(10) do
-        loop do
-          break unless system "ps -p #{pid} > /dev/null"
-          Process.kill :INT, pid
-          sleep 0.5
+        begin
+          while running?
+            Process.kill :INT, pid
+            sleep 0.5
+          end
+        rescue Errno::ESRCH
         end
       end
     end
 
     def restart
-      stop aborting = false
+      stop if running?
       start
     end
 
     def status
-      if File.exists? pid_path
+      if running?
         puts "server is running (#{File.read pid_path})"
       else
         puts 'server is not running'
@@ -71,12 +71,33 @@ module Garlando
 
     private
 
+    def running?
+      File.exists? pid_path
+    end
+
     def pid_path
       File.join @options[:pwd], @options[:pid]
     end
 
     def env_path
       File.join @options[:pwd], 'config/environment.rb'
+    end
+
+    def reopen
+      file = File.open File.join(@options[:pwd], @options[:log]), 'w+'
+      [STDOUT, STDERR].each { |e| e.reopen file }
+    end
+
+    def server
+      Rack::Handler.get @options[:server]
+    end
+
+    def application
+      Rack::URLMap.new rails.config.assets[:prefix] => rails.assets
+    end
+
+    def rails
+      Rails.application
     end
   end
 

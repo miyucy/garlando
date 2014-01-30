@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'tempfile'
 
 describe Garlando::CLI do
   let(:cli) { Garlando::CLI.new }
@@ -18,16 +19,15 @@ describe Garlando::CLI do
   end
 
   describe '#perform' do
+    before { Garlando::Server.any_instance.stub(:call) }
+
     it 'default command' do
-      Garlando::Server.any_instance.stub(:call)
-      # Garlando::Server.stub(new: true)
       cli.perform %w[]
 
       allow_any_instance_of(Garlando::Server).to receive(:call).with(:restart)
     end
 
     it 'send command' do
-      Garlando::Server.any_instance.stub(:call)
       cli.perform %w[foo]
 
       allow_any_instance_of(Garlando::Server).to receive(:call).with(:foo)
@@ -64,6 +64,40 @@ describe Garlando::Server do
       server.restart
 
       allow(server).to receive(:start)
+    end
+  end
+
+  describe '#stop' do
+    context 'When server is not running' do
+      before { server.stub running?: false, abort: nil }
+
+      it 'return immediate' do
+        server.stop
+
+        allow(server).to receive(:abort).with('server is not running')
+      end
+    end
+
+    context 'When server is running' do
+      let(:pid) { 1234567890 }
+
+      before do
+        @temp = Tempfile.new 'garlando'
+        @temp.write pid
+        @temp.flush
+
+        server.stub pid_path: @temp.path
+
+        Process.stub(:kill) { raise Errno::ESRCH }
+      end
+
+      after { @temp.close }
+
+      it 'send SIGINT to server' do
+        server.stop
+
+        allow(Process).to receive(:kill).with(:INT, pid)
+      end
     end
   end
 end
