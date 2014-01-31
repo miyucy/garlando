@@ -1,6 +1,7 @@
 require 'garlando/version'
 require 'optparse'
 require 'timeout'
+require 'net/http'
 
 module Garlando
   class Server
@@ -38,6 +39,7 @@ module Garlando
       ENV['RACK_ENV'] = @options[:env]
       require env_path
 
+      spinup
       server.run application, Host: @options[:host], Port: @options[:port]
     end
 
@@ -104,6 +106,22 @@ module Garlando
 
     def rails
       Rails.application
+    end
+
+    def spinup
+      Thread.new do
+        check = lambda do
+          begin
+            Net::HTTP.start(@options[:host], @options[:port]) do |http|
+              http.open_timeout = http.read_timeout = nil
+              http.get("#{rails.config.assets[:prefix]}/application.js")
+              throw :finish
+            end
+          rescue Errno::ECONNREFUSED
+          end
+        end
+        catch(:finish) { loop { check.call } }
+      end
     end
   end
 
