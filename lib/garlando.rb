@@ -13,7 +13,6 @@ module Garlando
       pid:    'tmp/pids/garlando.pid',
       port:   65501,
       pwd:    Dir.pwd,
-      server: 'thin',
     }
 
     def initialize(options={})
@@ -93,7 +92,7 @@ module Garlando
     end
 
     def server
-      Rack::Handler.get @options[:server]
+      Rack::Handler.default
     end
 
     def application
@@ -165,7 +164,6 @@ module Garlando
       options = Server::OPTIONS.dup
 
       opt = OptionParser.new
-      opt.on('-s', '--server SERVER')   { |v| options[:server] = v }
       opt.on('-o', '--host HOST')       { |v| options[:host] = v }
       opt.on('-p', '--port PORT')       { |v| options[:port] = v }
       opt.on('-P', '--pid FILE')        { |v| options[:pid]  = v }
