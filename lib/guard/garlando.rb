@@ -7,7 +7,7 @@ module Guard
     end
 
     def start
-      system 'garlando #{@option}'
+      spawn 'garlando #{@option} &'
     end
 
     def stop
