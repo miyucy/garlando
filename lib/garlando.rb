@@ -113,19 +113,23 @@ module Garlando
     end
 
     def spinup
-      Thread.new do
-        check = lambda do
-          begin
-            Net::HTTP.start(@options[:host], @options[:port]) do |http|
-              http.open_timeout = http.read_timeout = nil
-              http.get("#{rails.config.assets[:prefix]}/application.js")
-              http.get("#{rails.config.assets[:prefix]}/application.css")
-              throw :finish
-            end
-          rescue Errno::ECONNREFUSED
+      check = lambda do |path|
+        begin
+          Net::HTTP.start(@options[:host], @options[:port]) do |http|
+            http.open_timeout = http.read_timeout = nil
+            http.get path
+            throw :finish
           end
+        rescue Errno::ECONNREFUSED
         end
-        catch(:finish) { loop { check.call } }
+      end
+      [
+        "#{rails.config.assets[:prefix]}/application.js",
+        "#{rails.config.assets[:prefix]}/application.css",
+      ].each do |_path|
+        Thread.new(_path) do |path|
+          catch(:finish) { loop { check.call path } }
+        end
       end
     end
 
