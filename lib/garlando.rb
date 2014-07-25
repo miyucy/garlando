@@ -88,7 +88,7 @@ module Garlando
     end
 
     def reopen
-      file = File.open log_path, 'w+'
+      file = File.open log_path, 'a'
       [STDOUT, STDERR].each { |e| e.reopen file }
     end
 
