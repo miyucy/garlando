@@ -6,31 +6,31 @@ describe Garlando::CLI do
 
   describe '#parse' do
     it 'return command' do
-      commands, _ = cli.parse %w[start]
+      commands, _ = cli.parse %w(start)
 
       expect(commands).to eq ['start']
     end
 
     it 'return options' do
-      _, options = cli.parse %w[-s puma]
+      _, options = cli.parse %w(-o 192.168.0.1)
 
-      expect(options[:server]).to eq 'puma'
+      expect(options[:host]).to eq '192.168.0.1'
     end
   end
 
   describe '#perform' do
-    before { Garlando::Server.any_instance.stub(:call) }
+    before { allow_any_instance_of(Garlando::Server).to receive(:call) }
 
     it 'default command' do
-      cli.perform %w[]
+      expect_any_instance_of(Garlando::Server).to receive(:call).with(:restart)
 
-      allow_any_instance_of(Garlando::Server).to receive(:call).with(:restart)
+      cli.perform []
     end
 
     it 'send command' do
-      cli.perform %w[foo]
+      expect_any_instance_of(Garlando::Server).to receive(:call).with(:foo)
 
-      allow_any_instance_of(Garlando::Server).to receive(:call).with(:foo)
+      cli.perform %w(foo)
     end
   end
 end
@@ -44,37 +44,44 @@ describe Garlando::Server do
     end
 
     it 'otherwise' do
-      server.stub start: nil
-      server.call :start
-
       allow(server).to receive :start
+      expect(server).to receive :start
+
+      server.call :start
     end
   end
 
   describe '#restart' do
-    before { server.stub stop: nil, start: nil }
+    before do
+      allow(server).to receive(:stop)
+      allow(server).to receive(:start)
+      allow(server).to receive(:running?) { true }
+    end
 
     it 'call stop' do
-      server.restart
+      expect(server).to receive(:stop)
 
-      allow(server).to receive(:stop)
+      server.restart
     end
 
     it 'call start' do
-      server.restart
+      expect(server).to receive(:start)
 
-      allow(server).to receive(:start)
+      server.restart
     end
   end
 
   describe '#stop' do
     context 'When server is not running' do
-      before { server.stub running?: false, abort: nil }
+      before do
+        allow(server).to receive(:running?) { false }
+        allow(server).to receive(:abort)
+      end
 
       it 'return immediate' do
-        server.stop
+        expect(server).to receive(:abort).with('server is not running')
 
-        allow(server).to receive(:abort).with('server is not running')
+        server.stop
       end
     end
 
@@ -86,17 +93,16 @@ describe Garlando::Server do
         @temp.write pid
         @temp.flush
 
-        server.stub pid_path: @temp.path
-
-        Process.stub(:kill) { raise Errno::ESRCH }
+        allow(server).to receive(:pid_path) { @temp.path }
+        allow(Process).to receive(:kill) { raise Errno::ESRCH }
       end
 
       after { @temp.close }
 
       it 'send SIGINT to server' do
-        server.stop
+        expect(Process).to receive(:kill).with(:INT, pid)
 
-        allow(Process).to receive(:kill).with(:INT, pid)
+        server.stop
       end
     end
   end

@@ -5,7 +5,7 @@ require 'net/http'
 
 module Garlando
   class Server
-    COMMANDS = %i[start restart stop status]
+    COMMANDS = %i(start restart stop status)
     OPTIONS  = {
       env:    'development',
       host:   '0.0.0.0',
@@ -26,7 +26,7 @@ module Garlando
 
     def start
       abort 'server is already running?' if running?
-      abort "File could not found (#{env_path})" unless File.exists?(env_path)
+      abort "File could not found (#{env_path})" unless File.exist?(env_path)
 
       Process.daemon nochdir = true
 
