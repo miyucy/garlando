@@ -1,4 +1,4 @@
-# Garlando
+# Garlando [![Circle CI](https://circleci.com/gh/miyucy/garlando/tree/master.svg?style=svg)](https://circleci.com/gh/miyucy/garlando/tree/master)
 
 TODO: Write a gem description
 
