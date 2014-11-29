@@ -1,6 +1,6 @@
 # Garlando [![Circle CI](https://circleci.com/gh/miyucy/garlando/tree/master.svg?style=svg)](https://circleci.com/gh/miyucy/garlando/tree/master)
 
-TODO: Write a gem description
+Serve your rails assets from separate process. :briefcase:
 
 ## Installation
 
@@ -18,7 +18,22 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+Append one-line to your `spec/spec_helper.rb`.
+
+    Capybara.asset_host = 'http://0.0.0.0:65501'
+
+And, Boot `garlando`. (At your rails project root directory)
+
+    $ garlando
+
+### Appendix
+
+If you want to use with `Guard`.
+
+    guard 'garlando' do
+    end
+
+But, it's NO warranty. (I don't use `Guard` :smirk:)
 
 ## Contributing
 
